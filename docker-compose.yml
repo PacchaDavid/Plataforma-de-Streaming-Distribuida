@@ -1,0 +1,177 @@
+# ============================================================
+# Streaming Distribuido — Docker Compose
+# ============================================================
+# Un solo archivo para las 5 maquinas.
+# Cada maquina levanta solo sus servicios segun el perfil.
+# ============================================================
+
+services:
+
+  # ───────────────────────────────────────────────
+  # MAQUINA 2 — Redis (broker pub/sub)
+  # ───────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    profiles: ["gateway"]
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ───────────────────────────────────────────────
+  # MAQUINA 2 — Gateway Python
+  # ───────────────────────────────────────────────
+  gateway:
+    build: ./gateway-python
+    profiles: ["gateway"]
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - NODE_HOSTS=${NODE_HOSTS}
+      - USUARIOS_PORT=${USUARIOS_PORT}
+      - RECOMENDACIONES_PORT=${RECOMENDACIONES_PORT}
+      - PAGOS_PORT=${PAGOS_PORT}
+      - GATEWAY_HOST=${GATEWAY_HOST}
+      - MACHINE_ID=${MACHINE_ID}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ───────────────────────────────────────────────
+  # MAQUINA 1 — Frontend
+  # ───────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    profiles: ["frontend"]
+    ports:
+      - "8080:8080"
+    environment:
+      - REACT_APP_GATEWAY_HOST=${GATEWAY_HOST}
+      - REACT_APP_WS_URL=ws://${GATEWAY_HOST}:8000/ws/monitor
+      - REACT_APP_API_URL=http://${GATEWAY_HOST}:8000/api
+    restart: unless-stopped
+
+  # ───────────────────────────────────────────────
+  # MAQUINAS 3, 4, 5 — MariaDB Galera Cluster
+  # ───────────────────────────────────────────────
+  mariadb-galera:
+    image: bitnami/mariadb-galera:latest
+    profiles: ["node"]
+    ports:
+      - "${MARIADB_PORT}:3306"
+      - "4567:4567"
+      - "4568:4568"
+      - "4444:4444"
+    environment:
+      - MARIADB_GALERA_CLUSTER_NAME=streaming_cluster
+      - MARIADB_GALERA_CLUSTER_ADDRESS=${GALERA_CLUSTER_ADDRESS}
+      - MARIADB_GALERA_NODE_NAME=${GALERA_NODE_NAME}
+      - MARIADB_GALERA_NODE_ADDRESS=${GALERA_NODE_ADDRESS}
+      - MARIADB_ROOT_PASSWORD=changeme_demo
+      - MARIADB_DATABASE=streaming_db
+      - MARIADB_USER=streaming
+      - MARIADB_PASSWORD=streaming_pass
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mariadb_data:/bitnami/mariadb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pchangeme_demo"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ───────────────────────────────────────────────
+  # MAQUINAS 3, 4, 5 — Microservicio Usuarios
+  # ───────────────────────────────────────────────
+  usuarios:
+    build: ./microservicio-usuarios
+    profiles: ["node"]
+    ports:
+      - "${USUARIOS_PORT}:8081"
+    environment:
+      - SERVER_PORT=8081
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://127.0.0.1:${MARIADB_PORT}/streaming_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=changeme_demo
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MACHINE_ID=${MACHINE_ID}
+      - SERVICIO_NOMBRE=usuarios
+    depends_on:
+      mariadb-galera:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ───────────────────────────────────────────────
+  # MAQUINAS 3, 4, 5 — Microservicio Recomendaciones
+  # ───────────────────────────────────────────────
+  recomendaciones:
+    build: ./microservicio-recomendaciones
+    profiles: ["node"]
+    ports:
+      - "${RECOMENDACIONES_PORT}:8082"
+    environment:
+      - SERVER_PORT=8082
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://127.0.0.1:${MARIADB_PORT}/streaming_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=changeme_demo
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MACHINE_ID=${MACHINE_ID}
+      - SERVICIO_NOMBRE=recomendaciones
+    depends_on:
+      mariadb-galera:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ───────────────────────────────────────────────
+  # MAQUINAS 3, 4, 5 — Microservicio Pagos
+  # ───────────────────────────────────────────────
+  pagos:
+    build: ./microservicio-pagos
+    profiles: ["node"]
+    ports:
+      - "${PAGOS_PORT}:8083"
+    environment:
+      - SERVER_PORT=8083
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://127.0.0.1:${MARIADB_PORT}/streaming_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=changeme_demo
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MACHINE_ID=${MACHINE_ID}
+      - SERVICIO_NOMBRE=pagos
+    depends_on:
+      mariadb-galera:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ───────────────────────────────────────────────
+  # MAQUINAS 3, 4, 5 — Sidecar de replicacion
+  # ───────────────────────────────────────────────
+  sidecar-replicacion:
+    build:
+      context: .
+      dockerfile: Dockerfile.sidecar
+    profiles: ["node"]
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MARIADB_PORT=${MARIADB_PORT}
+      - GALERA_NODE_NAME=${GALERA_NODE_NAME}
+    depends_on:
+      mariadb-galera:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:

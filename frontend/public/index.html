@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StreamDist — Plataforma de Streaming Distribuida</title>
+    <meta name="theme-color" content="#08080f" />
+    <meta name="description" content="Plataforma de streaming con balanceo de carga, circuit breaker y replicación multi-maestro" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: oklch(0.08 0.02 265);
+            color: oklch(0.96 0.01 95);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: oklch(0.25 0.02 265); border-radius: 3px; }
+        ::selection { background: oklch(0.62 0.21 285 / 0.3); }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px oklch(0.62 0.21 285 / 0.3); }
+            50% { opacity: 0.7; box-shadow: 0 0 16px oklch(0.62 0.21 285 / 0.5); }
+        }
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slide-in {
+            from { opacity: 0; transform: translateX(-12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

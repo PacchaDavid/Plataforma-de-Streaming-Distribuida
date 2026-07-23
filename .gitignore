@@ -1,0 +1,5 @@
+.env
+PROYECTO_SISTEMAS_DISTRIBUIDOS.md
+**node_modules/
+**__pycache__
+**target
