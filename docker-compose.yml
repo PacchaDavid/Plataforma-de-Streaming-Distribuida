@@ -80,6 +80,8 @@ services:
       - MARIADB_DATABASE=streaming_db
       - MARIADB_USER=streaming
       - MARIADB_PASSWORD=streaming_pass
+      - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup_pass
+      # Alternativa para dev: ALLOW_EMPTY_PASSWORD=yes
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mariadb_data:/bitnami/mariadb
