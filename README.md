@@ -104,11 +104,11 @@ Asignar IP fija en la interfaz de red que conecta al switch.
 
 | Máquina | Integrante | Rol | IP |
 |---|---|---|---|
-| 1 | Ana | Frontend | `192.168.1.11` |
-| 2 | María | Gateway | `192.168.1.12` |
-| 3 | Pepito | Nodo 3 | `192.168.1.13` |
-| 4 | Juan | Nodo 4 | `192.168.1.14` |
-| 5 | José | Nodo 5 | `192.168.1.15` |
+| 1 | Justin | Frontend | `192.168.1.11` |
+| 2 | Antony | Gateway | `192.168.1.12` |
+| 3 | SantiagoJ | Nodo 3 | `192.168.1.13` |
+| 4 | David | Nodo 4 | `192.168.1.14` |
+| 5 | Parce | Nodo 5 | `192.168.1.15` |
 
 > 💡 **Método rápido con `nmcli`** (si usas NetworkManager, casi todas las distros modernas):
 > ```bash
@@ -148,7 +148,7 @@ Asignar IP fija en la interfaz de red que conecta al switch.
 Antes de desplegar, cada uno verifica que ve a los demás:
 
 ```bash
-# Ejemplo desde Máquina 3 (Pepito):
+# Ejemplo desde Máquina 3 (SantiagoJ):
 ping -c1 192.168.1.11   # Frontend
 ping -c1 192.168.1.12   # Gateway
 ping -c1 192.168.1.13   # (yo mismo)
@@ -167,21 +167,21 @@ ping -c1 192.168.1.15   # Nodo 5
 ### Orden de arranque
 
 ```bash
-# 🥇 Pepito (M3) — arranca primero, hace bootstrap de Galera automático
+# 🥇 SantiagoJ (M3) — arranca primero, hace bootstrap de Galera automático
 ./deploy.sh 3
 
 # ⏳ Esperar 15 segundos
 
-# 🥈 Juan (M4) — se une al cluster
+# 🥈 David (M4) — se une al cluster
 ./deploy.sh 4
 
-# 🥉 José (M5) — se une al cluster
+# 🥉 Parce (M5) — se une al cluster
 ./deploy.sh 5
 
-# 4️⃣ María (M2) — Gateway + Redis
+# 4️⃣ Antony (M2) — Gateway + Redis
 ./deploy.sh 2
 
-# 5️⃣ Ana (M1) — Frontend
+# 5️⃣ Justin (M1) — Frontend
 ./deploy.sh 1
 ```
 
@@ -262,7 +262,7 @@ wscat -c ws://192.168.1.12:8000/ws/monitor
 
 ## 📝 Notas para el día de la demo
 
-- **Proyectar solo el frontend** (Máquina 1, Ana). Ahí está `/dashboard`.
+- **Proyectar solo el frontend** (Máquina 1, Justin). Ahí está `/dashboard`.
 - Los cambios de estado se ven **solos**, no hay que refrescar nada.
 - Si el Circuit Breaker tarda en abrirse, reducir el timeout del proxy a 1s en el gateway.
 - Desconectar **solo un cable a la vez** para no perder quórum de Galera.
