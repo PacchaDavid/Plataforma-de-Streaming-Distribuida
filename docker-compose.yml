@@ -62,7 +62,7 @@ services:
   # MAQUINAS 3, 4, 5 — MariaDB Galera Cluster
   # ───────────────────────────────────────────────
   mariadb-galera:
-    image: bitnami/mariadb-galera:latest
+    image: bitnamilegacy/mariadb-galera:latest
     profiles: ["node"]
     ports:
       - "${MARIADB_PORT}:3306"
