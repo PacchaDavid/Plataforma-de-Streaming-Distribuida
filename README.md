@@ -6,29 +6,89 @@ Sistema que demuestra: **balanceo de carga**, **circuit breaker**, **replicació
 
 ---
 
+## 🚀 Flujo de ejecución
+
+```
+1. 📖  Leer README.md       ← Estás aquí (prerrequisitos, IPs, etc.)
+2. ⬇️  ./pull-images.sh      ← Precargar imágenes Docker (con o sin internet)
+3. 🚀  ./deploy.sh <ID>      ← Desplegar según ID de máquina (1-5)
+```
+
 ## 📦 Estructura del repo
 
 ```
 /proyecto-streaming-distribuido
 ├── deploy.sh              ← script único: ./deploy.sh <ID>
+├── pull-images.sh         ← precarga de imágenes Docker
 ├── docker-compose.yml     ← un compose para las 5 máquinas
-├── .env.example
-├── frontend/              ← Máquina 1 (React/Vue)
+├── frontend/              ← Máquina 1 (React)
 ├── gateway-python/        ← Máquina 2 (FastAPI + Redis)
 ├── microservicio-usuarios/
 ├── microservicio-recomendaciones/
 ├── microservicio-pagos/
 ├── db/
-│   ├── galera-node.docker-compose.yml
-│   └── init.sql
+│   ├── init.sql
+│   └── sidecar.py
 └── README.md
 ```
 
 ---
 
-## 🗓️ HOY — Lo que cada uno DEBE hacer antes de reunirnos
+## ⚙️ Prerrequisitos — según tu distribución de Linux
 
-> Esto es para que mañana sea **plug & play**. Si alguien no hace esto hoy, mañana perderemos tiempo de la demo.
+> ⏱️ Hacer esto **ANTES** del día de la demo.
+
+### 🔹 Ubuntu / Debian (apt)
+
+```bash
+# Docker
+sudo apt update
+sudo apt install -y docker.io git curl
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # cerrar sesión y volver a entrar
+
+# Docker Compose plugin
+sudo apt install -y docker-compose-v2
+# o si no: sudo apt install -y docker-compose
+```
+
+> ⚠️ Después de `usermod`, cierra sesión y vuelve a entrar, o ejecuta `newgrp docker`.
+
+### 🔹 Fedora / RHEL (dnf)
+
+```bash
+# Docker
+sudo dnf install -y dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin git
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+
+# Firewall (abrir puertos según tu rol, ver más abajo)
+sudo dnf install -y firewalld
+sudo systemctl enable --now firewalld
+```
+
+### 🔹 Arch Linux (pacman)
+
+```bash
+# Docker
+sudo pacman -S docker docker-compose git
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+### 🔹 Verificar instalación
+
+```bash
+docker --version
+docker compose version     # Docker Compose v2 (plugin)
+# Debe mostrar algo como: Docker Compose version v2.xx.x
+```
+
+---
+
+## 🗓️ Días antes — Preparación (con internet)
 
 ### ✅ 1. Revisar hardware
 
@@ -39,66 +99,68 @@ Cada laptop necesita:
 
 > El equipo necesita llevar **1 switch** (5+ puertos) y **5 cables de red** (uno por laptop). Confirmar quién los tiene.
 
-### ✅ 2. Pre‑pull de imágenes Docker
-
-**Obligatorio hacerlo HOY** porque mañana en el salón puede no haber internet o ser muy lento.
-
-```bash
-cd /proyecto-streaming-distribuido
-
-# Según tu rol, tira las imágenes que te corresponden:
-
-# ── TODAS las máquinas ──
-docker pull bitnami/mariadb-galera:latest
-docker pull eclipse-temurin:21-jdk
-docker pull python:3.12-slim
-docker pull node:20-alpine
-docker pull redis:7-alpine
-
-# Verificar que se descargaron:
-docker images
-```
-
-### ✅ 3. Clonar el repo (si no lo hiciste)
+### ✅ 2. Clonar el repo
 
 ```bash
 git clone <url-del-repo> /proyecto-streaming-distribuido
 cd /proyecto-streaming-distribuido
+chmod +x deploy.sh pull-images.sh
 ```
 
-### ✅ 4. Dar permisos al script
+### ✅ 3. Precargar imágenes Docker
+
+> **🚨 Obligatorio.** En el salón de la demo NO hay internet o es muy lento.
 
 ```bash
-chmod +x deploy.sh
+cd /proyecto-streaming-distribuido
+
+# Opción A: Descargar y construir todo localmente
+./pull-images.sh
+
+# Opción B: Descargar + exportar a USB para llevar a otras máquinas
+./pull-images.sh --save
+# → Genera streaming-images.tar (varios GB). Lo llevas en un USB.
 ```
 
-### ✅ 5. Saber el nombre de tu interfaz de red
+¿Sin espacio? Puedes ver qué se va a descargar con:
+```bash
+./pull-images.sh --list
+```
+
+### ✅ 4. Saber el nombre de tu interfaz de red
 
 ```bash
 ip link show
 # Busca algo como: eth0, enp0s3, enx00e04c..., etc.
-# → Anótalo, lo necesitarás mañana para asignar la IP estática
+# → Anótalo, lo necesitarás para asignar la IP estática
 ```
 
 ---
 
-## ⚙️ Pre-flight — Mañana (al llegar, antes de la demo)
+## 🚀 Pre-flight — El día de la demo (sin internet)
 
-### 1. Conectar cables y desactivar WiFi
+### 1. Cargar imágenes (si no se hizo antes)
+
+Si usaste la Opción B (USB), en cada máquina ejecutar:
+
+```bash
+cd /proyecto-streaming-distribuido
+./pull-images.sh --load     # importa desde streaming-images.tar
+```
+
+### 2. Conectar cables y desactivar WiFi
 
 1. Conectar cada laptop al **switch** con cable ethernet.
 2. **Desconectar / desactivar WiFi**. Si el WiFi está activo, el tráfico puede ir por WiFi en vez de por cable, y las IPs estáticas no funcionarán.
    ```bash
-   # Forma rápida en casi cualquier distro:
    nmcli radio wifi off
    ```
 3. Todos conectados al switch → **verificar conectividad**:
    ```bash
-   ping 192.168.1.11   # (cambiar según a quién estés probando)
-   # Si no responde: revisar IP, cable, firewall
+   ping 192.168.1.11
    ```
 
-### 2. IP estática
+### 3. IP estática
 
 Asignar IP fija en la interfaz de red que conecta al switch.
 
@@ -131,7 +193,7 @@ Asignar IP fija en la interfaz de red que conecta al switch.
 > sudo nmcli con down eth0 && sudo nmcli con up eth0
 > ```
 
-### 3. Abrir puertos en el firewall
+### 4. Abrir puertos en el firewall
 
 | Máquina | Puertos a abrir | Motivo |
 |---|---|---|
@@ -143,7 +205,7 @@ Asignar IP fija en la interfaz de red que conecta al switch.
 > **Fedora**: `sudo firewall-cmd --add-port=8000/tcp --permanent && sudo firewall-cmd --reload`
 > **Sin firewall**: verificar con `sudo ufw status` o `sudo firewall-cmd --list-all`
 
-### 4. Ping test — TODOS contra TODOS
+### 5. Ping test — TODOS contra TODOS
 
 Antes de desplegar, cada uno verifica que ve a los demás:
 
@@ -241,7 +303,7 @@ wscat -c ws://192.168.1.12:8000/ws/monitor
 | Gateway responde 502 | Nodos backend caídos | `docker compose ps` en M3, M4, M5 |
 | Dashboard no muestra datos | WebSocket no conecta | Verificar que M1 alcanza a M2 puerto 8000 |
 | Galera no arranca | Cluster no‑primario | Solo 1 nodo puede caer a la vez. Reconectar rápido. |
-| Imagen Docker no encontrada | No se hizo pre‑pull | Necesitas internet para `docker pull` |
+| Imagen Docker no encontrada | No se hizo pre‑pull | Ejecutar `./pull-images.sh` (con internet) o `./pull-images.sh --load` (desde USB) |
 
 ---
 

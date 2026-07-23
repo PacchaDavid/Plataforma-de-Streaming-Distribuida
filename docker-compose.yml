@@ -27,6 +27,7 @@ services:
   # ───────────────────────────────────────────────
   gateway:
     build: ./gateway-python
+    image: streaming-local/gateway:latest
     profiles: ["gateway"]
     ports:
       - "8000:8000"
@@ -49,6 +50,7 @@ services:
   # ───────────────────────────────────────────────
   frontend:
     build: ./frontend
+    image: streaming-local/frontend:latest
     profiles: ["frontend"]
     ports:
       - "8080:8080"
@@ -94,6 +96,7 @@ services:
   # ───────────────────────────────────────────────
   usuarios:
     build: ./microservicio-usuarios
+    image: streaming-local/usuarios:latest
     profiles: ["node"]
     ports:
       - "${USUARIOS_PORT}:8081"
@@ -116,6 +119,7 @@ services:
   # ───────────────────────────────────────────────
   recomendaciones:
     build: ./microservicio-recomendaciones
+    image: streaming-local/recomendaciones:latest
     profiles: ["node"]
     ports:
       - "${RECOMENDACIONES_PORT}:8082"
@@ -138,6 +142,7 @@ services:
   # ───────────────────────────────────────────────
   pagos:
     build: ./microservicio-pagos
+    image: streaming-local/pagos:latest
     profiles: ["node"]
     ports:
       - "${PAGOS_PORT}:8083"
@@ -162,6 +167,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.sidecar
+    image: streaming-local/sidecar-replicacion:latest
     profiles: ["node"]
     environment:
       - REDIS_HOST=${REDIS_HOST}
